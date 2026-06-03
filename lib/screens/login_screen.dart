@@ -332,8 +332,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _autoLoginConductor() async {
     AppLogger.separator(title: 'AUTO-LOGIN CONDUCTOR');
+    // Cliente terminal (incidente 'atendido'): puede reportar una emergencia
+    // nueva sin chocar con la regla "1 incidente activo por usuario" (409).
+    // lucia.pendiente.demo queda bloqueada porque tiene un incidente pendiente.
     await _handleLoginWithCredentials(
-      'lucia.pendiente.demo@gmail.com',
+      'ramiro.atendido.demo@gmail.com',
       'cliente123!',
     );
   }
@@ -456,7 +459,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _DevTile(
                 icon: Icons.bolt_outlined,
                 title: 'Entrar como conductor demo',
-                subtitle: 'lucia.pendiente.demo@gmail.com',
+                subtitle: 'ramiro.atendido.demo@gmail.com',
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   _autoLoginConductor();
@@ -475,11 +478,11 @@ class _LoginScreenState extends State<LoginScreen> {
               _DevTile(
                 icon: Icons.edit_outlined,
                 title: 'Autorellenar conductor',
-                subtitle: 'lucia.pendiente.demo@gmail.com',
+                subtitle: 'ramiro.atendido.demo@gmail.com',
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   setState(() {
-                    _emailController.text = 'lucia.pendiente.demo@gmail.com';
+                    _emailController.text = 'ramiro.atendido.demo@gmail.com';
                     _passwordController.text = 'cliente123!';
                   });
                 },

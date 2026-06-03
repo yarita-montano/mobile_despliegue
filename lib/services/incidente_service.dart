@@ -6,9 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uuid/uuid.dart';
 import '../config/api_config.dart';
 import '../models/incidente.dart';
 import '../models/evidencia.dart';
+import 'offline/outbox_service.dart';
 
 class IncidenteService {
   static const String baseUrl = ApiConfig.baseUrl;
@@ -35,27 +37,31 @@ class IncidenteService {
     required double longitud,
     String? idempotencyKey,
   }) async {
+    final token = await _getToken();
+    if (token == null) {
+      return {'success': false, 'error': 'No autenticado'};
+    }
+
+    // Idempotency key estable: se genera SIEMPRE una sola vez y se reutiliza
+    // tanto en el envío online como en el encolado offline, de modo que un
+    // reintento/reconexión no duplique el incidente (el backend deduplica por
+    // (id_usuario, idempotency_key)). El body se arma antes del try para poder
+    // reusarlo al encolar.
+    final key = idempotencyKey ?? const Uuid().v4();
+    final body = <String, dynamic>{
+      'id_vehiculo': idVehiculo,
+      'descripcion_usuario': descripcionUsuario,
+      'latitud': latitud,
+      'longitud': longitud,
+      'idempotency_key': key,
+    };
+
     try {
       debugPrint('[INCIDENTE] 🚨 Reportando emergencia...');
       debugPrint('[INCIDENTE] Vehículo: $idVehiculo');
       debugPrint('[INCIDENTE] Descripción: $descripcionUsuario');
       debugPrint('[INCIDENTE] GPS: $latitud, $longitud');
-      if (idempotencyKey != null) {
-        debugPrint('[INCIDENTE] idempotency_key: $idempotencyKey');
-      }
-
-      final token = await _getToken();
-      if (token == null) {
-        return {'success': false, 'error': 'No autenticado'};
-      }
-
-      final body = <String, dynamic>{
-        'id_vehiculo': idVehiculo,
-        'descripcion_usuario': descripcionUsuario,
-        'latitud': latitud,
-        'longitud': longitud,
-        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
-      };
+      debugPrint('[INCIDENTE] idempotency_key: $key');
 
       final response = await http
           .post(
@@ -98,11 +104,45 @@ class IncidenteService {
 
       return {'success': false, 'error': 'Error al reportar emergencia'};
     } on TimeoutException catch (_) {
-      debugPrint('[INCIDENTE] ❌ Timeout');
-      return {'success': false, 'error': 'Tiempo de conexión agotado'};
+      debugPrint('[INCIDENTE] ❌ Timeout, encolando reporte offline');
+      return _encolarReporteOffline(body, token);
+    } on SocketException catch (_) {
+      debugPrint('[INCIDENTE] ❌ Sin red, encolando reporte offline');
+      return _encolarReporteOffline(body, token);
     } catch (e) {
+      if (e is http.ClientException) {
+        debugPrint('[INCIDENTE] ❌ ClientException, encolando reporte offline');
+        return _encolarReporteOffline(body, token);
+      }
       debugPrint('[INCIDENTE] ❌ Exception: $e');
       return {'success': false, 'error': 'Error: $e'};
+    }
+  }
+
+  /// Encola el reporte en el outbox persistente para reenviarlo al recuperar
+  /// señal. Reusa el mismo body (con idempotency_key) para no duplicar.
+  Future<Map<String, dynamic>> _encolarReporteOffline(
+    Map<String, dynamic> body,
+    String token,
+  ) async {
+    try {
+      await OutboxService().enqueue(
+        method: 'POST',
+        path: '/incidencias/',
+        body: body,
+        token: token,
+      );
+      return {
+        'success': false,
+        'queued': true,
+        'error':
+            'Sin conexión: tu reporte se guardó y se enviará automáticamente al recuperar señal.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'No se pudo guardar el reporte sin conexión: $e',
+      };
     }
   }
 

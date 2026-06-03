@@ -105,6 +105,11 @@ class OutboxService {
       'X-Client-Id': item['client_id'] as String,
     };
 
+    // Timeout por item: un socket colgado (red caída sin cerrar) no debe
+    // bloquear el drenado del resto de la cola. Al expirar lanza
+    // TimeoutException, que el catch trata como reintentable.
+    const timeout = Duration(seconds: 30);
+
     try {
       http.Response resp;
       if (filesPaths.isNotEmpty) {
@@ -116,33 +121,39 @@ class OutboxService {
             req.files.add(await http.MultipartFile.fromPath('archivo', p));
           }
         }
-        resp = await http.Response.fromStream(await req.send());
+        resp = await http.Response.fromStream(await req.send().timeout(timeout));
       } else {
         headers['Content-Type'] = 'application/json';
         switch (method) {
           case 'POST':
-            resp = await http.post(
-              uri,
-              headers: headers,
-              body: body == null ? null : jsonEncode(body),
-            );
+            resp = await http
+                .post(
+                  uri,
+                  headers: headers,
+                  body: body == null ? null : jsonEncode(body),
+                )
+                .timeout(timeout);
             break;
           case 'PUT':
-            resp = await http.put(
-              uri,
-              headers: headers,
-              body: body == null ? null : jsonEncode(body),
-            );
+            resp = await http
+                .put(
+                  uri,
+                  headers: headers,
+                  body: body == null ? null : jsonEncode(body),
+                )
+                .timeout(timeout);
             break;
           case 'PATCH':
-            resp = await http.patch(
-              uri,
-              headers: headers,
-              body: body == null ? null : jsonEncode(body),
-            );
+            resp = await http
+                .patch(
+                  uri,
+                  headers: headers,
+                  body: body == null ? null : jsonEncode(body),
+                )
+                .timeout(timeout);
             break;
           case 'DELETE':
-            resp = await http.delete(uri, headers: headers);
+            resp = await http.delete(uri, headers: headers).timeout(timeout);
             break;
           default:
             return true;

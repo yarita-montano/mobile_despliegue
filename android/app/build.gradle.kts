@@ -22,8 +22,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "app.flujo.emergencia"
+        // applicationId distinto al de la app gemela (Yary2) para que Android las
+        // trate como apps separadas y puedan convivir en el mismo dispositivo sin
+        // que una desinstale a la otra. El `namespace` (compilacion) se mantiene.
+        applicationId = "app.flujo.emergencia.yary"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
