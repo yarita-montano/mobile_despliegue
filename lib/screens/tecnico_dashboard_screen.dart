@@ -1,11 +1,15 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 
 import '../models/asignacion_response.dart';
 import '../models/evidencia.dart';
 import '../services/auth_service.dart';
+import '../services/realtime_service.dart';
 import '../services/tecnico_asignaciones_service.dart';
 import '../services/tecnico_auth_service.dart';
 import '../widgets/taller_activo_chip.dart';
+import 'tecnico_ruta_screen.dart';
 
 class TecnicoDashboardScreen extends StatefulWidget {
   const TecnicoDashboardScreen({super.key});
@@ -19,6 +23,8 @@ class _TecnicoDashboardScreenState extends State<TecnicoDashboardScreen> {
       TecnicoAsignacionesService();
   final AuthService _authService = AuthService();
   final TecnicoAuthService _tecnicoAuthService = TecnicoAuthService();
+  final RealtimeService _realtime = RealtimeService();
+  StreamSubscription<WsEvent>? _rtSub;
 
   AsignacionResponse? _asignacion;
   IncidenteResponse? _incidente;
@@ -36,10 +42,23 @@ class _TecnicoDashboardScreenState extends State<TecnicoDashboardScreen> {
     super.initState();
     _log('initState -> dashboard tecnico inicializado');
     _loadAsignacion();
+    // Recarga reactiva: cuando el taller acepta la asignación, el backend emite
+    // 'asignacion.asignada' por el canal usuario:{id} (suscrito en el login).
+    // Sin esto el técnico veía "No hay asignación" hasta recargar manualmente.
+    _rtSub = _realtime.events.listen(_onRealtimeEvent);
+  }
+
+  void _onRealtimeEvent(WsEvent evt) {
+    if (!mounted) return;
+    if (evt.event == 'asignacion.asignada') {
+      _log('_onRealtimeEvent -> asignacion.asignada, recargando asignacion');
+      _loadAsignacion();
+    }
   }
 
   @override
   void dispose() {
+    _rtSub?.cancel();
     _tecnicoService.detenerSeguimientoUbicacion();
     super.dispose();
   }
@@ -180,7 +199,7 @@ class _TecnicoDashboardScreenState extends State<TecnicoDashboardScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Cobro final (opcional)'),
+              const Text('Cobro final (obligatorio)'),
               const SizedBox(height: 8),
               TextField(
                 controller: costoController,
@@ -210,9 +229,19 @@ class _TecnicoDashboardScreenState extends State<TecnicoDashboardScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // El monto final es obligatorio: el backend lo exige (>0) y sin
+                // el se generaba un cobro de $0 que el cliente no podia pagar.
+                final costo = double.tryParse(costoController.text.trim());
+                if (costo == null || costo <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ingresa el monto final del servicio (mayor a 0).'),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.pop(context);
                 try {
-                  final costo = double.tryParse(costoController.text.trim());
                   final resumen = resumenController.text.trim().isEmpty
                       ? null
                       : resumenController.text.trim();
@@ -444,6 +473,52 @@ class _TecnicoDashboardScreenState extends State<TecnicoDashboardScreen> {
     );
   }
 
+  /// Abre la vista de ruta estilo delivery hacia el cliente.
+  ///
+  /// El idIncidente sale de la asignacion y las coordenadas del cliente del
+  /// incidente embebido (IncidenteResponse.latitud/longitud), que el backend
+  /// envia en IncidenteParaTecnico.
+  void _abrirRutaCliente() {
+    final asig = _asignacion;
+    if (asig == null) return;
+    final incidente = _incidente ?? asig.incidente;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TecnicoRutaScreen(
+          idIncidente: asig.idIncidente,
+          clienteLat: incidente.latitud,
+          clienteLng: incidente.longitud,
+        ),
+      ),
+    );
+  }
+
+  /// Boton "Ver ruta al cliente": visible mientras el tecnico va hacia el
+  /// cliente (asignacion aceptada o en_camino).
+  Widget _buildVerRutaButton() {
+    final estado = _asignacion?.estadoAsignacion;
+    if (estado != 'aceptada' && estado != 'en_camino') {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _abrirRutaCliente,
+          icon: const Icon(Icons.navigation),
+          label: const Text('Ver ruta al cliente'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.blue,
+            side: const BorderSide(color: Colors.blue),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGpsIndicator() {
     if (_asignacion?.estadoAsignacion != 'en_camino') return const SizedBox.shrink();
     return Card(
@@ -663,6 +738,7 @@ class _TecnicoDashboardScreenState extends State<TecnicoDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              _buildVerRutaButton(),
               _buildGpsIndicator(),
               const SizedBox(height: 16),
               Text('Evidencias del Cliente', style: Theme.of(context).textTheme.titleMedium),
