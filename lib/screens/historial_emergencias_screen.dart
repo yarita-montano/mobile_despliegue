@@ -312,6 +312,11 @@ class _HistorialEmergenciasScreenState
               : null;
           final tieneTallerConfirmado = asigActiva != null &&
               estadosAsigActivos.contains(asigActiva.estado.nombre.toLowerCase());
+          // El chat cliente<->taller debe estar disponible en TODOS los estados
+          // mientras exista una asignacion (incluida 'pendiente'). El backend
+          // solo valida que el incidente sea del usuario, asi que es seguro.
+          final puedeChatear =
+              inc.asignaciones != null && inc.asignaciones!.isNotEmpty;
 
           return AlertDialog(
             title: Text('#${inc.idIncidente} - Detalles'),
@@ -470,7 +475,7 @@ class _HistorialEmergenciasScreenState
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('Cerrar'),
               ),
-              if (tieneTallerConfirmado)
+              if (puedeChatear)
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);

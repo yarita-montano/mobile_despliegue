@@ -314,6 +314,17 @@ class _MisPagosScreenState extends State<MisPagosScreen>
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  Text(
+                    item.conceptoLabel,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: item.esCompensacion
+                          ? Colors.deepOrange
+                          : Colors.grey.shade700,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     _monto(item.montoTotal),

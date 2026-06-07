@@ -33,6 +33,16 @@ class PagoClienteItem {
     );
   }
 
+  /// True si este pago es una compensacion por cancelacion (se identifica por
+  /// la referencia_externa 'compensacion-cancelacion-{id_asignacion}').
+  bool get esCompensacion =>
+      referenciaExterna != null &&
+      referenciaExterna!.startsWith('compensacion-cancelacion');
+
+  /// Etiqueta del concepto del pago para mostrar en la UI.
+  String get conceptoLabel =>
+      esCompensacion ? 'Compensación por cancelación' : 'Servicio';
+
   bool get estaCompletado => estado.toLowerCase() == 'completado';
 
   bool get estaPendiente {

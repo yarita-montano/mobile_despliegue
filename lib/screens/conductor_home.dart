@@ -471,14 +471,8 @@ class _ConductorHomeScreenState extends State<ConductorHomeScreen> {
         accent: AppColors.forest,
         accentSoft: AppColors.forestSoft,
       ),
-      _ActionItem(
-        icon: Icons.notifications_none_rounded,
-        label: 'Notificaciones',
-        hint: 'Avisos y mensajes',
-        route: '/notificaciones',
-        accent: AppColors.amber,
-        accentSoft: AppColors.amberSoft,
-      ),
+      // Notificaciones se quita del grid: queda solo el icono del header
+      // (junto a cerrar sesion).
     ];
 
     return GridView.count(
