@@ -80,6 +80,10 @@ dependencies:
   # UUID para idempotencia outbox (M8)
   uuid: ^4.4.2
 
+  # Compartir enlace de seguimiento en vivo (opcion C) y abrir URLs externas
+  share_plus: ^10.0.0
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

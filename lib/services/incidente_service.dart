@@ -146,6 +146,39 @@ class IncidenteService {
     }
   }
 
+  /// Genera un enlace PUBLICO de seguimiento en vivo del incidente (opcion C).
+  /// El backend devuelve la URL completa (FRONTEND_URL/seguir/{token}); el
+  /// receptor la abre en el navegador, sin app ni cuenta.
+  Future<Map<String, dynamic>> compartirSeguimiento(int idIncidente) async {
+    try {
+      final token = await _getToken();
+      if (token == null) return {'success': false, 'error': 'No autenticado'};
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/incidencias/$idIncidente/compartir'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'url': data['url'], 'token': data['token']};
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Sesión expirada',
+          'code': 'AUTH_EXPIRED',
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'error': 'Incidente no encontrado'};
+      }
+      return {'success': false, 'error': 'No se pudo generar el enlace'};
+    } catch (e) {
+      return {'success': false, 'error': 'Error: $e'};
+    }
+  }
+
   /// Confirma el borrador de incidente eligiendo (opcionalmente) un taller.
   /// Promueve el estado a 'pendiente' y dispara el broadcast a talleres.
   Future<Map<String, dynamic>> confirmarIncidencia({

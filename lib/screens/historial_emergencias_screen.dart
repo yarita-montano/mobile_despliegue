@@ -318,6 +318,15 @@ class _HistorialEmergenciasScreenState
           final puedeChatear =
               inc.asignaciones != null && inc.asignaciones!.isNotEmpty;
 
+          // Cancelar disponible en TODOS los estados MENOS los terminales:
+          // incidente atendido/completado/cancelado o asignacion ya completada.
+          final estadoIncNombre = inc.getEstadoNombre().toLowerCase();
+          final puedeCancelar = !(estadoIncNombre.contains('atend') ||
+                  estadoIncNombre.contains('complet') ||
+                  estadoIncNombre.contains('cancel')) &&
+              !(asigActiva != null &&
+                  asigActiva.estado.nombre.toLowerCase() == 'completada');
+
           return AlertDialog(
             title: Text('#${inc.idIncidente} - Detalles'),
             content: SingleChildScrollView(
@@ -423,7 +432,7 @@ class _HistorialEmergenciasScreenState
                       ],
                     ),
                     const SizedBox(height: 8),
-                    _buildAsignacionCard(asigActiva!),
+                    _buildAsignacionCard(asigActiva),
                   ],
                   if (inc.idCategoria == null) ...[
                     const SizedBox(height: 16),
@@ -445,7 +454,9 @@ class _HistorialEmergenciasScreenState
               ),
             ),
             actions: [
-              if (inc.idEstado == 1 || inc.idEstado == 2)
+              // Cancelar en TODOS los estados salvo los terminales (completado /
+              // cancelado). El backend calcula la compensacion segun el estado.
+              if (puedeCancelar)
                 TextButton(
                   onPressed: cancelar,
                   style: TextButton.styleFrom(foregroundColor: Colors.red),

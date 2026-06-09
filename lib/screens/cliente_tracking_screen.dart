@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/adenda_service.dart';
+import '../services/incidente_service.dart';
 import '../services/realtime_service.dart';
 import '../widgets/adenda_pendiente_card.dart';
 import '../widgets/cancelar_button.dart';
@@ -38,8 +41,10 @@ class _ClienteTrackingScreenState extends State<ClienteTrackingScreen> {
   bool _llego = false;
 
   final _adendaSvc = AdendaService();
+  final _incidenteSvc = IncidenteService();
   List<Adenda> _adendasPendientes = [];
   Timer? _adendaPollTimer;
+  bool _compartiendo = false;
 
   @override
   void initState() {
@@ -118,6 +123,34 @@ class _ClienteTrackingScreenState extends State<ClienteTrackingScreen> {
     );
   }
 
+  Future<void> _compartirSeguimiento() async {
+    setState(() => _compartiendo = true);
+    final res = await _incidenteSvc.compartirSeguimiento(widget.idIncidente);
+    if (!mounted) return;
+    setState(() => _compartiendo = false);
+
+    final url = res['url'] as String?;
+    if (res['success'] == true && url != null) {
+      final mensaje = 'Sigue mi servicio de asistencia en vivo: $url';
+      try {
+        await Share.share(mensaje, subject: 'Seguimiento en vivo');
+      } catch (_) {
+        // Fallback si el share nativo no está disponible: copiar al portapapeles.
+        await Clipboard.setData(ClipboardData(text: url));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enlace copiado al portapapeles')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['error']?.toString() ?? 'No se pudo compartir'),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _rt.unsubscribe('incidente:${widget.idIncidente}');
@@ -145,6 +178,19 @@ class _ClienteTrackingScreenState extends State<ClienteTrackingScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: _compartiendo
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.share),
+            tooltip: 'Compartir seguimiento en vivo',
+            onPressed: _compartiendo ? null : _compartirSeguimiento,
+          ),
+        ],
       ),
       body: Stack(
         children: [

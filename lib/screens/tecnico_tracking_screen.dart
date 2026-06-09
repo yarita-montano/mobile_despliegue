@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/incidente_service.dart';
 
@@ -28,6 +30,7 @@ class _TecnicoTrackingScreenState extends State<TecnicoTrackingScreen> {
 
   Timer? _timer;
   bool _cargando = true;
+  bool _compartiendo = false;
   String? _error;
 
   double? _tecnicoLat;
@@ -86,6 +89,35 @@ class _TecnicoTrackingScreenState extends State<TecnicoTrackingScreen> {
     }
   }
 
+  Future<void> _compartirSeguimiento() async {
+    setState(() => _compartiendo = true);
+    final res = await _service.compartirSeguimiento(widget.idIncidente);
+    if (!mounted) return;
+    setState(() => _compartiendo = false);
+
+    final url = res['url'] as String?;
+    if (res['success'] == true && url != null) {
+      try {
+        await Share.share(
+          'Sigue mi servicio de asistencia en vivo: $url',
+          subject: 'Seguimiento en vivo',
+        );
+      } catch (_) {
+        await Clipboard.setData(ClipboardData(text: url));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enlace copiado al portapapeles')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['error']?.toString() ?? 'No se pudo compartir'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cliente = LatLng(widget.clienteLat, widget.clienteLng);
@@ -108,6 +140,19 @@ class _TecnicoTrackingScreenState extends State<TecnicoTrackingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Seguimiento #${widget.idIncidente}'),
+        actions: [
+          IconButton(
+            icon: _compartiendo
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.share),
+            tooltip: 'Compartir seguimiento en vivo',
+            onPressed: _compartiendo ? null : _compartirSeguimiento,
+          ),
+        ],
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
