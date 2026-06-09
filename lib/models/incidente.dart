@@ -60,7 +60,10 @@ class IncidenteResponse {
 /// Helper compartido para formatear un estado de incidente con emoji.
 /// Prefiere el `nombre` (string) que viene del backend; si solo tenemos el
 /// id_estado caemos a un mapeo heurístico (queda como fallback).
-String _formatearEstado({required int idEstado, required String? nombreEstado}) {
+String _formatearEstado({
+  required int idEstado,
+  required String? nombreEstado,
+}) {
   final nombre = (nombreEstado ?? '').toLowerCase().trim();
   switch (nombre) {
     case 'borrador':
@@ -149,8 +152,8 @@ class IncidenteDetalle {
       latitud: (json['latitud'] as num).toDouble(),
       longitud: (json['longitud'] as num).toDouble(),
       resumenIa: json['resumen_ia'],
-      clasificacionIaConfianza:
-          (json['clasificacion_ia_confianza'] as num?)?.toDouble(),
+      clasificacionIaConfianza: (json['clasificacion_ia_confianza'] as num?)
+          ?.toDouble(),
       requiereRevisionManual: json['requiere_revision_manual'] ?? false,
       evaluado: json['evaluado'] ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -191,7 +194,9 @@ class IncidenteDetalle {
         case 'rechazada':
           return '↪️ Buscando otro taller';
         case 'cancelada':
-          return '❌ Cancelada por el taller';
+          return asigActiva.canceladaPor == 'cliente'
+              ? '❌ Cancelado por ti'
+              : '❌ Cancelada por el taller';
       }
     }
 

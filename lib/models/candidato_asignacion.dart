@@ -42,6 +42,10 @@ class Asignacion {
   final int? etaMinutos;
   final String? notaTaller;
   final String? motivoRechazo;
+  final String? canceladaPor; // 'cliente' | 'taller'
+  final String? motivoCancelacion;
+  final double compensacionMonto;
+  final bool compensacionPagada;
   final TallerMini taller;
   final EstadoAsignacion estado;
 
@@ -52,6 +56,10 @@ class Asignacion {
     this.etaMinutos,
     this.notaTaller,
     this.motivoRechazo,
+    this.canceladaPor,
+    this.motivoCancelacion,
+    this.compensacionMonto = 0,
+    this.compensacionPagada = false,
     required this.taller,
     required this.estado,
   });
@@ -64,6 +72,10 @@ class Asignacion {
       etaMinutos: json['eta_minutos'],
       notaTaller: json['nota_taller'],
       motivoRechazo: json['motivo_rechazo'],
+      canceladaPor: json['cancelada_por'],
+      motivoCancelacion: json['motivo_cancelacion'],
+      compensacionMonto: (json['compensacion_monto'] as num?)?.toDouble() ?? 0,
+      compensacionPagada: json['compensacion_pagada'] ?? false,
       taller: json['taller'] != null
           ? TallerMini.fromJson(json['taller'] as Map<String, dynamic>)
           : TallerMini(idTaller: 0, nombre: 'Taller desconocido'),
@@ -98,10 +110,7 @@ class EstadoAsignacion {
   final int idEstadoAsignacion;
   final String nombre;
 
-  EstadoAsignacion({
-    required this.idEstadoAsignacion,
-    required this.nombre,
-  });
+  EstadoAsignacion({required this.idEstadoAsignacion, required this.nombre});
 
   factory EstadoAsignacion.fromJson(Map<String, dynamic> json) {
     return EstadoAsignacion(

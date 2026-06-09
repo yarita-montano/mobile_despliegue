@@ -73,107 +73,110 @@ class _HistorialEmergenciasScreenState
       body: cargando
           ? const Center(child: CircularProgressIndicator())
           : error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(error!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            cargando = true;
-                            error = null;
-                          });
-                          _cargarIncidencias();
-                        },
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(error!),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        cargando = true;
+                        error = null;
+                      });
+                      _cargarIncidencias();
+                    },
+                    child: const Text('Reintentar'),
                   ),
-                )
-              : incidencias.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                ],
+              ),
+            )
+          : incidencias.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('No tienes emergencias reportadas'),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/reportar-emergencia'),
+                    icon: const Icon(Icons.emergency),
+                    label: const Text('Reportar Emergencia'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () async {
+                setState(() => cargando = true);
+                _cargarIncidencias();
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: incidencias.length,
+                itemBuilder: (context, index) {
+                  final inc = incidencias[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 8,
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getColorEstado(inc.idEstado),
+                        child: const Icon(Icons.emergency, color: Colors.white),
+                      ),
+                      title: Text(
+                        '#${inc.idIncidente} - ${inc.getMarca()} ${inc.getPlaca()}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.inbox_outlined,
-                              size: 64, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          const Text('No tienes emergencias reportadas'),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: () => Navigator.pushNamed(
-                              context,
-                              '/reportar-emergencia',
+                          const SizedBox(height: 4),
+                          Text(
+                            inc.getCategoriaNombre(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            '${inc.getEstadoNombre()} • ${inc.getNivelPrioridad()}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
                             ),
-                            icon: const Icon(Icons.emergency),
-                            label: const Text('Reportar Emergencia'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
+                          ),
+                          Text(
+                            inc.getFechaFormato(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        setState(() => cargando = true);
-                        _cargarIncidencias();
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        _showDetailDialog(context, inc);
                       },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(8),
-                        itemCount: incidencias.length,
-                        itemBuilder: (context, index) {
-                          final inc = incidencias[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: _getColorEstado(inc.idEstado),
-                                child: const Icon(Icons.emergency,
-                                    color: Colors.white),
-                              ),
-                              title: Text(
-                                '#${inc.idIncidente} - ${inc.getMarca()} ${inc.getPlaca()}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    inc.getCategoriaNombre(),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  Text(
-                                    '${inc.getEstadoNombre()} • ${inc.getNivelPrioridad()}',
-                                    style: const TextStyle(
-                                        fontSize: 11, color: Colors.grey),
-                                  ),
-                                  Text(
-                                    inc.getFechaFormato(),
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey.shade600),
-                                  ),
-                                ],
-                              ),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                _showDetailDialog(context, inc);
-                              },
-                            ),
-                          );
-                        },
-                      ),
                     ),
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final resultado = await Navigator.pushNamed(
@@ -220,7 +223,9 @@ class _HistorialEmergenciasScreenState
               ),
             );
 
-            final resultado = await incidenteService.analizarConIA(inc.idIncidente);
+            final resultado = await incidenteService.analizarConIA(
+              inc.idIncidente,
+            );
 
             if (!mounted) return;
             Navigator.pop(ctx); // Cierra el indicador de carga
@@ -263,15 +268,22 @@ class _HistorialEmergenciasScreenState
                   ),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text('Sí, cancelar', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text(
+                      'Sí, cancelar',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
             );
             if (confirmar != true) return;
 
-            final resultado = await incidenteService.cancelarIncidente(inc.idIncidente);
+            final resultado = await incidenteService.cancelarIncidente(
+              inc.idIncidente,
+            );
             if (!mounted) return;
 
             if (resultado['success'] == true) {
@@ -300,18 +312,25 @@ class _HistorialEmergenciasScreenState
           // asignación: pendiente/rechazada no cuentan porque aún no hay un
           // técnico realmente asignado al cliente.
           const estadosAsigActivos = {
-            'aceptada', 'en_camino', 'llegado', 'completada'
+            'aceptada',
+            'en_camino',
+            'llegado',
+            'completada',
           };
-          final asigActiva = (inc.asignaciones != null &&
-                  inc.asignaciones!.isNotEmpty)
+          final asigActiva =
+              (inc.asignaciones != null && inc.asignaciones!.isNotEmpty)
               ? inc.asignaciones!.firstWhere(
                   (a) => estadosAsigActivos.contains(
-                      a.estado.nombre.toLowerCase()),
+                    a.estado.nombre.toLowerCase(),
+                  ),
                   orElse: () => inc.asignaciones!.first,
                 )
               : null;
-          final tieneTallerConfirmado = asigActiva != null &&
-              estadosAsigActivos.contains(asigActiva.estado.nombre.toLowerCase());
+          final tieneTallerConfirmado =
+              asigActiva != null &&
+              estadosAsigActivos.contains(
+                asigActiva.estado.nombre.toLowerCase(),
+              );
           // El chat cliente<->taller debe estar disponible en TODOS los estados
           // mientras exista una asignacion (incluida 'pendiente'). El backend
           // solo valida que el incidente sea del usuario, asi que es seguro.
@@ -321,11 +340,18 @@ class _HistorialEmergenciasScreenState
           // Cancelar disponible en TODOS los estados MENOS los terminales:
           // incidente atendido/completado/cancelado o asignacion ya completada.
           final estadoIncNombre = inc.getEstadoNombre().toLowerCase();
-          final puedeCancelar = !(estadoIncNombre.contains('atend') ||
+          final puedeCancelar =
+              !(estadoIncNombre.contains('atend') ||
                   estadoIncNombre.contains('complet') ||
                   estadoIncNombre.contains('cancel')) &&
               !(asigActiva != null &&
                   asigActiva.estado.nombre.toLowerCase() == 'completada');
+
+          // Asignacion cancelada (para mostrar quien cancelo y la compensacion).
+          final canceladas = (inc.asignaciones ?? const <Asignacion>[]).where(
+            (a) => a.estado.nombre.toLowerCase() == 'cancelada',
+          );
+          final asigCancelada = canceladas.isEmpty ? null : canceladas.last;
 
           return AlertDialog(
             title: Text('#${inc.idIncidente} - Detalles'),
@@ -335,7 +361,10 @@ class _HistorialEmergenciasScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _detailRow('Estado:', inc.getEstadoNombre()),
-                  _detailRow('Vehículo:', '${inc.getMarca()} ${inc.getPlaca()}'),
+                  _detailRow(
+                    'Vehículo:',
+                    '${inc.getMarca()} ${inc.getPlaca()}',
+                  ),
                   _detailRow('Categoría:', inc.getCategoriaNombre()),
                   _detailRow('Prioridad:', inc.getNivelPrioridad()),
                   _detailRow('Ubicación:', inc.getUbicacion()),
@@ -353,28 +382,38 @@ class _HistorialEmergenciasScreenState
                     const Divider(height: 28),
                     Row(
                       children: [
-                        const Icon(Icons.auto_awesome,
-                            color: Colors.deepPurple, size: 20),
+                        const Icon(
+                          Icons.auto_awesome,
+                          color: Colors.deepPurple,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         const Text(
                           'Análisis IA',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                         const Spacer(),
                         if (inc.clasificacionIaConfianza != null)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: _colorConfianza(
-                                  inc.clasificacionIaConfianza!),
+                                inc.clasificacionIaConfianza!,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               '${(inc.clasificacionIaConfianza! * 100).toStringAsFixed(0)}%',
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 11),
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
                       ],
@@ -385,8 +424,7 @@ class _HistorialEmergenciasScreenState
                       decoration: BoxDecoration(
                         color: Colors.deepPurple.shade50,
                         borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: Colors.deepPurple.shade200),
+                        border: Border.all(color: Colors.deepPurple.shade200),
                       ),
                       child: Text(
                         inc.resumenIa!,
@@ -403,8 +441,11 @@ class _HistorialEmergenciasScreenState
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.warning_amber,
-                                color: Colors.orange, size: 18),
+                            Icon(
+                              Icons.warning_amber,
+                              color: Colors.orange,
+                              size: 18,
+                            ),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -421,18 +462,27 @@ class _HistorialEmergenciasScreenState
                     const Divider(height: 28),
                     Row(
                       children: [
-                        const Icon(Icons.build_circle,
-                            color: Colors.blue, size: 20),
+                        const Icon(
+                          Icons.build_circle,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         const Text(
                           'Asignación',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     _buildAsignacionCard(asigActiva),
+                  ],
+                  if (asigCancelada != null) ...[
+                    const Divider(height: 28),
+                    _buildCancelacionInfo(asigCancelada),
                   ],
                   if (inc.idCategoria == null) ...[
                     const SizedBox(height: 16),
@@ -533,9 +583,8 @@ class _HistorialEmergenciasScreenState
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => SubirEvidenciaScreen(
-                        idIncidente: inc.idIncidente,
-                      ),
+                      builder: (_) =>
+                          SubirEvidenciaScreen(idIncidente: inc.idIncidente),
                     ),
                   );
                 },
@@ -597,10 +646,7 @@ class _HistorialEmergenciasScreenState
               children: [
                 const Icon(Icons.phone, size: 14, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(
-                  a.taller.telefono!,
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(a.taller.telefono!, style: const TextStyle(fontSize: 12)),
               ],
             ),
           ],
@@ -615,15 +661,73 @@ class _HistorialEmergenciasScreenState
     return Colors.red;
   }
 
+  Widget _buildCancelacionInfo(Asignacion a) {
+    final porCliente = a.canceladaPor == 'cliente';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cancel_outlined, size: 18, color: Colors.red.shade700),
+              const SizedBox(width: 8),
+              Text(
+                porCliente ? 'Cancelado por ti' : 'Cancelado por el taller',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.red.shade700,
+                ),
+              ),
+            ],
+          ),
+          if (a.motivoCancelacion != null &&
+              a.motivoCancelacion!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Motivo: ${a.motivoCancelacion!}',
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ],
+          const SizedBox(height: 8),
+          if (a.compensacionMonto > 0) ...[
+            Text(
+              'Compensación al taller: Bs ${a.compensacionMonto.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              a.compensacionPagada ? 'Ya está pagada' : 'Pendiente de cobro',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+          ] else
+            Text(
+              'Sin compensación (el taller aún no había salido).',
+              style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              softWrap: true),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            softWrap: true,
+          ),
           const SizedBox(width: 12),
           Expanded(child: Text(value, softWrap: true)),
         ],
